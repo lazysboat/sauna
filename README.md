@@ -119,15 +119,27 @@ the new tables automatically (it introspects the schema at query time).
 
 ## Deploy to Render
 
+[`render.yaml`](render.yaml) is a two-service Blueprint:
+
+| Service | Type | What |
+|---|---|---|
+| `sauna-agent` | Web service (Starter, always-on) | FastAPI backend + agent terminal UI |
+| `sauna-directory` | Static site (free) | The Next.js directory, statically exported |
+
 1. Push this repo to GitHub.
-2. In Render: **New → Blueprint** → select the repo. It reads [`render.yaml`](render.yaml) and
-   creates one web service.
-3. Set the secret env vars in the dashboard: `ANTHROPIC_API_KEY`, `CLICKHOUSE_HOST`,
-   `CLICKHOUSE_PASSWORD` (the rest have defaults in `render.yaml`).
-4. After deploy, check `GET https://<service>.onrender.com/health` → `{"ok": true}`, then open the URL.
+2. In Render: **New → Blueprint** → select the repo.
+3. Fill the prompted secrets: `ANTHROPIC_API_KEY`, `CLICKHOUSE_HOST`, `CLICKHOUSE_PASSWORD`
+   (backend) and `NEXT_PUBLIC_API_BASE_URL` = the backend's URL, normally
+   `https://sauna-agent.onrender.com` (directory).
+4. Apply and wait for both deploys. If the backend URL got a suffix (name collision),
+   fix `NEXT_PUBLIC_API_BASE_URL` on the static site and redeploy it.
+5. Make sure ClickHouse Cloud's IP allow-list permits Render egress (or is "Anywhere").
+6. Verify: `GET <backend>/health` → `{"ok": true}`; open both URLs.
 
 > ClickHouse Cloud and Airbyte Cloud are managed separately — Render only runs the app and connects
 > out to ClickHouse Cloud. (Render has no managed ClickHouse; ClickHouse Cloud is the simplest store.)
+> Note: `/simulate-month` and `/dev/reset` are unauthenticated demo controls — fine for a
+> hackathon week, but don't leave this public long-term.
 
 ## Configuration
 

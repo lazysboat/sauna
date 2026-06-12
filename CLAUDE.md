@@ -109,9 +109,11 @@ curl -s -X POST localhost:8000/ask -H 'content-type: application/json' \
 - **Airbyte** — replaces `seed.py` with a real ELT sync. See `airbyte/README.md`
   (Faker source → ClickHouse destination). The app needs no changes; it reads whatever
   schema lands in ClickHouse.
-- **Render** — deploy the app: push to GitHub, then Render → New → Blueprint (reads
-  `render.yaml`). Set `ANTHROPIC_API_KEY`, `CLICKHOUSE_HOST`, `CLICKHOUSE_PASSWORD` in the
-  dashboard. Verify `GET https://<service>.onrender.com/health`.
+- **Render** — deploy both surfaces: push to GitHub, then Render → New → Blueprint (reads
+  `render.yaml`: `sauna-agent` web service + `sauna-directory` static site). Prompted
+  secrets: `ANTHROPIC_API_KEY`, `CLICKHOUSE_HOST`, `CLICKHOUSE_PASSWORD`, and
+  `NEXT_PUBLIC_API_BASE_URL` (= the backend URL). Verify `GET <backend>/health`.
+  Gotcha: ClickHouse Cloud's IP allow-list must permit Render egress.
 
 ## Map of the repo
 
