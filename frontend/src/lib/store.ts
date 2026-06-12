@@ -79,20 +79,34 @@ function useApiList<T extends WithId>(path: string): [T[], SetList<T>, boolean] 
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`${API_BASE}${path}`)
-      .then((r) => r.json())
-      .then((data: T[]) => {
-        if (!cancelled) {
-          setItemsState(data);
-          setLoaded(true);
+
+    // Retries cover transient backend restarts/reseeds; refetch-on-focus keeps
+    // the view current after the agent books something in the other tab.
+    const load = async (retries = 3) => {
+      for (let attempt = 0; attempt <= retries && !cancelled; attempt++) {
+        try {
+          const r = await fetch(`${API_BASE}${path}`);
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const data: T[] = await r.json();
+          if (!cancelled) {
+            setItemsState(data);
+            setLoaded(true);
+          }
+          return;
+        } catch (e) {
+          console.error(`API GET ${path} failed (attempt ${attempt + 1})`, e);
+          await new Promise((res) => setTimeout(res, 1500));
         }
-      })
-      .catch((e) => {
-        console.error(`API GET ${path} failed`, e);
-        if (!cancelled) setLoaded(true);
-      });
+      }
+      if (!cancelled) setLoaded(true);
+    };
+
+    void load();
+    const onFocus = () => void load(0);
+    window.addEventListener("focus", onFocus);
     return () => {
       cancelled = true;
+      window.removeEventListener("focus", onFocus);
     };
   }, [path]);
 

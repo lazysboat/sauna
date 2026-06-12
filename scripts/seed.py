@@ -116,27 +116,50 @@ def generate_saunas():
 
 
 def generate_availability(saunas):
-    """2–5 sessions per sauna over the next 14 days, ~75% open."""
+    """Realistic schedules over the next 21 days.
+
+    Each sauna has a fixed weekly rhythm: a set of operating weekdays
+    (public saunas run most days; private rentals lean Thu–Sun) and 1–3
+    fixed daily start times. Near-term slots are more likely already
+    booked (the market has been selling), far-out dates are mostly open.
+    """
     from app.models import Session
 
     rng = random.Random(43)
     today = datetime.now().date()
     sessions = []
     for n, sauna in enumerate(saunas):
-        slots = set()
-        for _ in range(rng.randint(2, 5)):
-            day = rng.randint(1, 14)
-            hour = rng.randint(15, 20)
-            if (day, hour) in slots:
+        # weekly rhythm — per-person/public saunas operate more days than
+        # private full-booking rentals
+        if sauna.priceUnit == "person":
+            n_days = rng.randint(5, 7)
+        else:
+            n_days = rng.randint(3, 4)
+        weekend_first = [3, 4, 5, 6, 0, 1, 2]  # Thu Fri Sat Sun Mon Tue Wed
+        operating_weekdays = set(weekend_first[:n_days])
+        if n_days < 7:  # vary which weekdays beyond the weekend core
+            operating_weekdays = set(rng.sample(weekend_first[:4], min(3, n_days)))
+            extra = [d for d in range(7) if d not in operating_weekdays]
+            operating_weekdays |= set(rng.sample(extra, n_days - len(operating_weekdays)))
+
+        start_hours = sorted(rng.sample([14, 15, 16, 17, 18, 19, 20], rng.randint(1, 3)))
+
+        for day in range(1, 22):
+            date = today + timedelta(days=day)
+            if date.weekday() not in operating_weekdays:
                 continue
-            slots.add((day, hour))
-            sessions.append(Session(
-                id=f"s-{n + 1:03d}-{day:02d}{hour:02d}",
-                experienceId=sauna.id,
-                date=(today + timedelta(days=day)).isoformat(),
-                time=f"{hour:02d}:00",
-                status="open" if rng.random() < 0.75 else "booked",
-            ))
+            # closer dates are more sold; weekends sell better too
+            p_booked = 0.55 if day <= 7 else 0.30 if day <= 14 else 0.12
+            if date.weekday() >= 4:  # Fri/Sat/Sun
+                p_booked = min(0.85, p_booked + 0.15)
+            for hour in start_hours:
+                sessions.append(Session(
+                    id=f"s-{n + 1:03d}-{day:02d}{hour:02d}",
+                    experienceId=sauna.id,
+                    date=date.isoformat(),
+                    time=f"{hour:02d}:00",
+                    status="booked" if rng.random() < p_booked else "open",
+                ))
     return sessions
 
 
