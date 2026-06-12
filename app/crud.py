@@ -94,4 +94,34 @@ def book(session_id: str, client=Depends(_client)) -> Session:
         raise HTTPException(status_code=404, detail="session not found")
     if err == "already_booked":
         raise HTTPException(status_code=409, detail="session already booked")
+    if err == "not_published":
+        raise HTTPException(status_code=409, detail="sauna is not on the platform")
     return ses
+
+
+# --- growth simulation (demo controls) ---
+
+GROWTH_STEP = 10
+
+
+@router.post("/simulate-month")
+def simulate_month(client=Depends(_client)) -> dict:
+    """Onboard the next 10 saunas (publish them), capped at the full catalog."""
+    experiences = store.list_experiences(client)
+    published_before = sum(1 for e in experiences if e.status == "published")
+    paused = sorted((e for e in experiences if e.status == "paused"), key=lambda e: e.id)
+    to_publish = paused[:GROWTH_STEP]
+    for exp in to_publish:
+        exp.status = "published"
+    if to_publish:
+        store.bulk_upsert_experiences(client, to_publish)
+    return {"published": published_before + len(to_publish)}
+
+
+@router.post("/dev/reset")
+def dev_reset(client=Depends(_client)) -> dict:
+    """Dev control: rebuild the deterministic demo world (month 1, 10 saunas)."""
+    from scripts.seed import seed_marketplace
+
+    seed_marketplace(client)
+    return {"published": GROWTH_STEP}

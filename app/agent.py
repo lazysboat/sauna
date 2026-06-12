@@ -99,6 +99,11 @@ def _book(ch, session_id: str) -> str:
             return f"ERROR: no session with id {session_id}"
         if err == "already_booked":
             return f"ERROR: session {session_id} is already booked"
+        if err == "not_published":
+            return (
+                f"ERROR: the sauna for session {session_id} is not on the "
+                "platform (not published) — pick a published one"
+            )
         return f"BOOKED: {ses.model_dump_json()}"
     except Exception as exc:  # noqa: BLE001 - surface to the model
         return f"ERROR: {exc}"

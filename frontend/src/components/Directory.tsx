@@ -5,9 +5,16 @@
  * full schedule. The buyer agent on :8000 consumes the same data and books the
  * slots shown here. */
 
-import { useMemo, useState } from "react";
-import { Clock, Users, X } from "lucide-react";
-import { Experience, Session, useExperiences, useSessions } from "@/lib/store";
+import { useMemo, useRef, useState } from "react";
+import { Clock, Loader2, Users, X } from "lucide-react";
+import {
+  Experience,
+  Session,
+  apiPost,
+  refetchAll,
+  useExperiences,
+  useSessions,
+} from "@/lib/store";
 
 const DATE_FMT = new Intl.DateTimeFormat("en-GB", {
   weekday: "short",
@@ -24,11 +31,65 @@ function slotLabel(s: Session): string {
 }
 
 export default function Directory() {
-  const [saunas, , loaded] = useExperiences();
+  const [allSaunas, , loaded] = useExperiences();
   const [sessions] = useSessions();
   const [query, setQuery] = useState("");
   const [city, setCity] = useState("");
   const [selected, setSelected] = useState<Experience | null>(null);
+  const [simulating, setSimulating] = useState(false);
+  const resetClicks = useRef<number[]>([]);
+
+  // Only onboarded (published) saunas are on the platform; the rest join as
+  // "New Agent Scout" grows the marketplace.
+  const saunas = useMemo(
+    () => allSaunas.filter((s) => s.status === "published"),
+    [allSaunas],
+  );
+  const month = Math.max(1, Math.ceil(saunas.length / 10));
+  const allOnboarded = loaded && saunas.length >= allSaunas.length;
+
+  // Dummy ~5s progress so the scout feels like real agent work before results.
+  const SCOUT_STAGES = [
+    "Scouting saunas…",
+    "Contacting providers…",
+    "Adding listings…",
+  ];
+  const [stage, setStage] = useState<string | null>(null);
+
+  const scoutWithAgent = async () => {
+    setSimulating(true);
+    try {
+      for (const s of SCOUT_STAGES) {
+        setStage(s);
+        await new Promise((r) => setTimeout(r, 1700));
+      }
+      await apiPost("/simulate-month");
+      refetchAll();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setStage(null);
+      setSimulating(false);
+    }
+  };
+
+  // Hidden dev control: 5 rapid clicks on the month label resets to month 1.
+  const onMonthLabelClick = async () => {
+    const now = Date.now();
+    resetClicks.current = [...resetClicks.current.filter((t) => now - t < 2000), now];
+    if (resetClicks.current.length < 5) return;
+    resetClicks.current = [];
+    if (!window.confirm("Reset marketplace to month 1 (10 saunas)?")) return;
+    setSimulating(true);
+    try {
+      await apiPost("/dev/reset");
+      refetchAll();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSimulating(false);
+    }
+  };
 
   const cities = useMemo(
     () => [...new Set(saunas.map((s) => s.city).filter(Boolean))].sort(),
@@ -82,9 +143,30 @@ export default function Directory() {
             </option>
           ))}
         </select>
-        <span className="text-sm text-muted-foreground">
-          {loaded ? `${visible.length} of ${saunas.length} saunas` : "loading…"}
+        <span
+          className="select-none text-sm text-muted-foreground"
+          onClick={onMonthLabelClick}
+        >
+          {loaded
+            ? `Month ${month} · ${visible.length} of ${saunas.length} saunas`
+            : "loading…"}
         </span>
+        <button
+          onClick={scoutWithAgent}
+          disabled={simulating || allOnboarded}
+          className="ml-auto flex h-8 items-center gap-2 rounded-sm bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-walnut disabled:opacity-70"
+        >
+          {simulating ? (
+            <>
+              <Loader2 size={14} className="animate-spin" />
+              {stage}
+            </>
+          ) : allOnboarded ? (
+            "All saunas onboarded"
+          ) : (
+            "Scout with Agent"
+          )}
+        </button>
       </div>
 
       {loaded && visible.length === 0 && (
@@ -108,6 +190,14 @@ export default function Directory() {
                 alt={sauna.title}
                 loading="lazy"
                 className="aspect-[3/2] w-full object-cover"
+                onError={(e) => {
+                  // graceful fallback if a remote image fails to load
+                  const img = e.currentTarget;
+                  if (!img.dataset.fallback) {
+                    img.dataset.fallback = "1";
+                    img.src = `https://picsum.photos/seed/${sauna.id}/600/400`;
+                  }
+                }}
               />
               <div className="p-4">
                 <div className="flex items-start justify-between gap-3">

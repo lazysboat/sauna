@@ -12,9 +12,16 @@ FastAPI + ClickHouse backend:
    `POST /sessions/{id}/book`) or natural language via `POST /ask` (Claude tool-use
    loop with `run_sql` + `book_session` tools). `GET /` on :8000 is a dark-terminal
    chat UI for it.
-2. **Sauna directory** — `frontend/` Next.js app (:3000): read-only summary of 100
-   dummy saunas (image, provider, city, price, capacity) with upcoming availability
-   (open sessions). Seeded by `make seed`; the agent books from the same data.
+2. **Sauna directory** — `frontend/` Next.js app (:3000): read-only summary of the
+   onboarded saunas (image, provider, city, price, capacity) with upcoming
+   availability (open sessions; click a card for the full schedule). Seeded by
+   `make seed`; the agent books from the same data.
+
+**Growth simulation:** the platform launches with **10 published saunas** (90 more
+seeded as `paused`). The directory's **"Scout with Agent"** button (`POST
+/simulate-month`) onboards 10 more per press, capped at 100 — the agent's bookable
+world grows in sync (paused saunas 409 on booking). Hidden dev reset: **click the
+"Month N · …" label 5 times quickly** (or `POST /dev/reset`) → fresh month-1 world.
 
 **ClickHouse** stores everything (ReplacingMergeTree upsert/tombstone pattern —
 query marketplace tables with `FINAL` + `WHERE _deleted = 0`), **Airbyte** (optional)

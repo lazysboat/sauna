@@ -81,6 +81,80 @@ CITIES = [
     "Hämeenlinna", "Mikkeli", "Levi",
 ]
 
+# Real sauna photos from Wikimedia Commons, grouped to match the template
+# archetypes (raft photos for raft cruises, savusauna photos for smoke saunas…).
+_WM = "https://upload.wikimedia.org/wikipedia/commons"
+IMAGES = {
+    "raft": [
+        f"{_WM}/thumb/6/63/Saunalautta_-_Saunaboat_-_panoramio.jpg/1280px-Saunalautta_-_Saunaboat_-_panoramio.jpg",
+        f"{_WM}/thumb/7/7f/Saunalautta.jpg/1280px-Saunalautta.jpg",
+        f"{_WM}/thumb/d/d3/Koivurannan_saunalautta_Oulu_20191005.jpg/1280px-Koivurannan_saunalautta_Oulu_20191005.jpg",
+        f"{_WM}/thumb/c/c4/Koivurannan_saunalautta_Oulu_20201003_02.jpg/1280px-Koivurannan_saunalautta_Oulu_20201003_02.jpg",
+        f"{_WM}/thumb/6/6a/Saarelan_saunalautta_Oulu_20250501.jpg/1280px-Saarelan_saunalautta_Oulu_20250501.jpg",
+        f"{_WM}/thumb/2/2f/Saunalautta_Vuoksella_juhannusy%C3%B6n%C3%A4.JPG/1280px-Saunalautta_Vuoksella_juhannusy%C3%B6n%C3%A4.JPG",
+        f"{_WM}/thumb/f/f0/Saunalautta_Vuoksella_juhannusaattona.JPG/1280px-Saunalautta_Vuoksella_juhannusaattona.JPG",
+        f"{_WM}/thumb/d/dc/Saunalautta_2883-20-2.jpg/1280px-Saunalautta_2883-20-2.jpg",
+        f"{_WM}/thumb/9/9e/Saunalaiva_hietalahti.jpg/1280px-Saunalaiva_hietalahti.jpg",
+        f"{_WM}/thumb/8/85/Floating_Sauna_Pyhalahti_Fishing_Port.jpg/1280px-Floating_Sauna_Pyhalahti_Fishing_Port.jpg",
+        f"{_WM}/thumb/b/be/Sauna%2C_Finland%2C_Turku%2C_sauna%2C_skinny_dipping%2C_houseboat%2C_20220910%2C_picture_1.jpg/1280px-Sauna%2C_Finland%2C_Turku%2C_sauna%2C_skinny_dipping%2C_houseboat%2C_20220910%2C_picture_1.jpg",
+        f"{_WM}/thumb/7/78/Sauna%2C_Finland%2C_Turku%2C_sauna%2C_skinny_dipping%2C_houseboat%2C_20220910%2C_picture_2.jpg/1280px-Sauna%2C_Finland%2C_Turku%2C_sauna%2C_skinny_dipping%2C_houseboat%2C_20220910%2C_picture_2.jpg",
+    ],
+    "smoke": [
+        f"{_WM}/9/9d/Suomalainen_savusauna.jpg",
+        f"{_WM}/0/00/Finnish_Smoke_sauna.jpg",
+        f"{_WM}/5/58/Finnish_smoke_sauna.jpg",
+        f"{_WM}/thumb/0/0b/Traditional_Finnish_smoke_sauna.jpg/1280px-Traditional_Finnish_smoke_sauna.jpg",
+        f"{_WM}/thumb/3/34/Savusauna.jpg/1280px-Savusauna.jpg",
+        f"{_WM}/thumb/6/62/Savusauna_rovaniemi.jpg/1280px-Savusauna_rovaniemi.jpg",
+        f"{_WM}/thumb/b/b5/Smoke_sauna_Muuratsalo_Experimental_House.jpg/1280px-Smoke_sauna_Muuratsalo_Experimental_House.jpg",
+        f"{_WM}/thumb/5/5c/Smoke_Sauna_%28395139052%29.jpg/1280px-Smoke_Sauna_%28395139052%29.jpg",
+        f"{_WM}/thumb/4/4a/Smoke_sauna_-_panoramio.jpg/1280px-Smoke_sauna_-_panoramio.jpg",
+        f"{_WM}/thumb/b/b8/Smoke_Sauna_%2830765202172%29.jpg/1280px-Smoke_Sauna_%2830765202172%29.jpg",
+        f"{_WM}/thumb/a/a1/Smoke_sauna%2C_Siida_Museum%2C_Inari%2C_Finland_%281%29_%2836637910296%29.jpg/1280px-Smoke_sauna%2C_Siida_Museum%2C_Inari%2C_Finland_%281%29_%2836637910296%29.jpg",
+        f"{_WM}/thumb/e/e3/Tarvasp%C3%A4%C3%A4n_savusauna.jpg/1280px-Tarvasp%C3%A4%C3%A4n_savusauna.jpg",
+        f"{_WM}/thumb/5/50/Myllym%C3%A4en_torpan_savusauna.jpg/1280px-Myllym%C3%A4en_torpan_savusauna.jpg",
+        f"{_WM}/thumb/0/05/Public_Smoke_Sauna_at_Kuusij%C3%A4rvi%2C_Vantaa%2C_Finland%2C_January_2021.jpg/1280px-Public_Smoke_Sauna_at_Kuusij%C3%A4rvi%2C_Vantaa%2C_Finland%2C_January_2021.jpg",
+        f"{_WM}/thumb/7/7f/Interior_of_a_smoke_sauna%2C_Uusikaupunki%2C_Finland_-_20030510.jpg/1280px-Interior_of_a_smoke_sauna%2C_Uusikaupunki%2C_Finland_-_20030510.jpg",
+        f"{_WM}/thumb/7/7b/J%C3%A4rvenp%C3%A4%C3%A4_-_Suviranta_-_Smoke_Sauna_-_panoramio.jpg/1280px-J%C3%A4rvenp%C3%A4%C3%A4_-_Suviranta_-_Smoke_Sauna_-_panoramio.jpg",
+        f"{_WM}/9/9e/2012-08-31_18.52.22_Savusauna.jpg",
+    ],
+    "public": [
+        f"{_WM}/b/b7/Kotiharjun_yleinen_sauna_%28Kotiharju_public_sauna_in_Helsinki%29_Helsingin_Torkkelinm%C3%A4ell%C3%A4_Kalliossa_01.jpg",
+        f"{_WM}/1/13/Kotiharjun_yleinen_sauna_%28Kotiharju_public_sauna_in_Helsinki%29_Helsingin_Torkkelinm%C3%A4ell%C3%A4_Kalliossa_02.jpg",
+        f"{_WM}/b/bb/Kotiharjun_yleinen_sauna_%28Kotiharju_public_sauna_in_Helsinki%29_Helsingin_Torkkelinm%C3%A4ell%C3%A4_Kalliossa_03.jpg",
+        f"{_WM}/thumb/5/5b/Rajaportin_sis%C3%A4%C3%A4nk%C3%A4ynti.jpg/1280px-Rajaportin_sis%C3%A4%C3%A4nk%C3%A4ynti.jpg",
+        f"{_WM}/thumb/c/cf/Rajaportilla_vilvotellaan.jpg/1280px-Rajaportilla_vilvotellaan.jpg",
+        f"{_WM}/thumb/d/dc/Saunabar%2C_Helsingfors.jpg/1280px-Saunabar%2C_Helsingfors.jpg",
+        f"{_WM}/thumb/4/45/Clarion_Hotel_Helsinki%2C_Sauna%2C_20231215_-_03.jpg/1280px-Clarion_Hotel_Helsinki%2C_Sauna%2C_20231215_-_03.jpg",
+        f"{_WM}/thumb/5/59/Finnish_Sauna_Society.jpg/1280px-Finnish_Sauna_Society.jpg",
+    ],
+    "shore": [
+        f"{_WM}/thumb/4/44/Sauna_Sunset_%2830811239481%29.jpg/1280px-Sauna_Sunset_%2830811239481%29.jpg",
+        f"{_WM}/thumb/7/7b/Fishing_hut_and_sauna_on_the_sea_%2893039%29.jpg/1280px-Fishing_hut_and_sauna_on_the_sea_%2893039%29.jpg",
+        f"{_WM}/thumb/2/23/Seaside_sauna_in_Kirkkonummi.jpg/1280px-Seaside_sauna_in_Kirkkonummi.jpg",
+        f"{_WM}/thumb/9/99/Selfmade_finnish_log_sauna.jpg/1280px-Selfmade_finnish_log_sauna.jpg",
+        f"{_WM}/thumb/1/19/Wooden_sauna_building_not_in_use_in_Uutela%2C_Vuosaari%2C_Helsinki%2C_Finland%2C_2018_February.jpg/1280px-Wooden_sauna_building_not_in_use_in_Uutela%2C_Vuosaari%2C_Helsinki%2C_Finland%2C_2018_February.jpg",
+        f"{_WM}/thumb/2/2b/Tarvo_sauna_%28May_2026%29.jpg/1280px-Tarvo_sauna_%28May_2026%29.jpg",
+        f"{_WM}/thumb/7/7c/Suomenlinna-B60.jpg/1280px-Suomenlinna-B60.jpg",
+        f"{_WM}/e/eb/Ruuhonsaaren-sauna.jpg",
+        f"{_WM}/thumb/1/17/Rantasauna_Pyh%C3%A4lahti_Keitele_beach_%28Konnevesi%29.jpg/1280px-Rantasauna_Pyh%C3%A4lahti_Keitele_beach_%28Konnevesi%29.jpg",
+        f"{_WM}/thumb/6/65/Saunas_of_Varala_Sports_Institute_in_Tahmela_20130206.jpg/1280px-Saunas_of_Varala_Sports_Institute_in_Tahmela_20130206.jpg",
+        f"{_WM}/thumb/c/c2/Tynnyrisauna.JPG/1280px-Tynnyrisauna.JPG",
+        f"{_WM}/thumb/d/d6/Bastun%2C_Mariehamn%2C_aland.jpg/1280px-Bastun%2C_Mariehamn%2C_aland.jpg",
+        f"{_WM}/thumb/5/55/Inside_a_sauna_trailer_in_Haukilahti.jpg/1280px-Inside_a_sauna_trailer_in_Haukilahti.jpg",
+        f"{_WM}/thumb/4/4e/Sauna-l%C3%B6yly.jpg/1280px-Sauna-l%C3%B6yly.jpg",
+        f"{_WM}/9/94/Cooling_down_near_sauna.jpg",
+        f"{_WM}/thumb/4/4b/Finnish_Sauna_-_panoramio.jpg/1280px-Finnish_Sauna_-_panoramio.jpg",
+    ],
+}
+
+# image group per template (same order as TEMPLATES):
+# raft cruise, sea raft, lakeside smoke, smoke world, rapids hot tub,
+# public waterfront, downtown groups, big-group smoke
+TEMPLATE_IMAGE_GROUP = [
+    "raft", "raft", "smoke", "smoke", "shore", "public", "public", "smoke",
+]
+
 N_SAUNAS = 100
 
 
@@ -90,14 +164,18 @@ def generate_saunas():
     rng = random.Random(42)
     saunas = []
     for i in range(1, N_SAUNAS + 1):
+        t_idx = (i - 1) % len(TEMPLATES)
         title, desc, provider_pat, unit, price_rng, cap_rng, hours_rng, loc_pat = (
-            TEMPLATES[(i - 1) % len(TEMPLATES)]
+            TEMPLATES[t_idx]
         )
         city = rng.choice(CITIES)
         exp_id = f"exp-{i:03d}"
         price = rng.randint(*price_rng)
         if unit == "booking":
             price = round(price / 10) * 10  # round bookings to tens of euros
+        # archetype-matched real photo; cycles within the group
+        group = IMAGES[TEMPLATE_IMAGE_GROUP[t_idx]]
+        image = group[((i - 1) // len(TEMPLATES)) % len(group)]
         saunas.append(Experience(
             id=exp_id,
             title=title,
@@ -105,12 +183,14 @@ def generate_saunas():
             city=city,
             location=loc_pat.format(city=city),
             description=desc,
-            imageUrl=f"https://picsum.photos/seed/{exp_id}/600/400",
+            imageUrl=image,
             priceAmount=price,
             priceUnit=unit,
             capacity=rng.randint(*cap_rng),
             durationHours=rng.randint(*hours_rng),
-            status="published",
+            # Growth simulation: the platform launches with 10 saunas;
+            # POST /simulate-month onboards (publishes) 10 more at a time.
+            status="published" if i <= 10 else "paused",
         ))
     return saunas
 

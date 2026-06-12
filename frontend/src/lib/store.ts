@@ -41,6 +41,19 @@ export function randomId(prefix: string): string {
   return `${prefix}-${Math.random().toString(16).slice(2, 8)}`;
 }
 
+const REFETCH_EVENT = "loyly:refetch";
+
+/** Make all data hooks re-pull from the API (after a server-side mutation). */
+export function refetchAll(): void {
+  window.dispatchEvent(new Event(REFETCH_EVENT));
+}
+
+export async function apiPost(path: string): Promise<unknown> {
+  const r = await fetch(`${API_BASE}${path}`, { method: "POST" });
+  if (!r.ok) throw new Error(`POST ${path} → HTTP ${r.status}`);
+  return r.json();
+}
+
 type WithId = { id: string };
 type SetList<T> = (next: T[] | ((prev: T[]) => T[])) => void;
 
@@ -104,9 +117,11 @@ function useApiList<T extends WithId>(path: string): [T[], SetList<T>, boolean] 
     void load();
     const onFocus = () => void load(0);
     window.addEventListener("focus", onFocus);
+    window.addEventListener(REFETCH_EVENT, onFocus);
     return () => {
       cancelled = true;
       window.removeEventListener("focus", onFocus);
+      window.removeEventListener(REFETCH_EVENT, onFocus);
     };
   }, [path]);
 

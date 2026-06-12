@@ -75,8 +75,12 @@ curl -s -X POST localhost:8000/ask \
 ```
 
 `make seed` rebuilds the whole demo world deterministically: **100 dummy saunas**
-(8 content archetypes × 20 Finnish cities, one picsum image each) and **~350
-availability sessions** over the next two weeks (~75% open). Re-running resets it.
+(8 content archetypes × 20 Finnish cities, one picsum image each) with realistic
+schedules — ~3,000 availability sessions over three weeks, more booked near-term.
+The platform "launches" with **10 saunas onboarded**; the directory's **Scout with
+Agent** button (`POST /simulate-month`) onboards 10 more per press up to 100, and
+the agent's bookable catalog grows in sync. Hidden dev reset: click the
+"Month N · …" label in the directory 5 times quickly (or `POST /dev/reset`).
 
 ## The sauna directory (frontend/)
 

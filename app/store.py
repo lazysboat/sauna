@@ -144,6 +144,14 @@ def book_session(client, session_id: str) -> tuple[Session | None, str | None]:
         return None, "not_found"
     if ses.status == "booked":
         return ses, "already_booked"
+    # only saunas that are on the platform (published) are bookable
+    rows = client.query(
+        "SELECT status FROM experiences FINAL "
+        "WHERE _deleted = 0 AND id = %(id)s",
+        parameters={"id": ses.experienceId},
+    ).result_rows
+    if not rows or rows[0][0] != "published":
+        return ses, "not_published"
     ses.status = "booked"
     upsert_session(client, ses)
     return ses, None
