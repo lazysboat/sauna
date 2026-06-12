@@ -1,6 +1,6 @@
-# sauna 🧖 — Löyly booking marketplace
+# sauna 🧖 — Sauna booking for agents 
 
-A sauna-experience **booking marketplace** with two interfaces over one FastAPI +
+A sauna-experience **agentic booking** with two interfaces over one FastAPI +
 ClickHouse backend:
 
 1. **Agent interface** — buyer agents discover and book sessions: REST
