@@ -20,8 +20,11 @@ def _id(prefix: str) -> str:
 class Experience(BaseModel):
     id: str = Field(default_factory=lambda: _id("exp"))
     title: str
+    provider: str = ""
+    city: str = ""
     location: str = ""
     description: str = ""
+    imageUrl: str = ""
     priceAmount: float = 0
     priceUnit: PriceUnit = "booking"
     capacity: int = 1

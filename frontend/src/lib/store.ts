@@ -13,8 +13,11 @@ export type ExperienceStatus = "published" | "paused";
 export type Experience = {
   id: string;
   title: string;
+  provider: string;
+  city: string;
   location: string;
   description: string;
+  imageUrl: string;
   priceAmount: number;
   priceUnit: PriceUnit;
   capacity: number;

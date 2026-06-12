@@ -48,116 +48,95 @@ def ask(body: Ask):
         return {"answer": f"Error: {exc}", "queries": []}
 
 
-# Buyer-agent-facing chat view, styled to match the Traverum design system used
-# by the provider dashboard (frontend/): warm white, olive primary, DM Sans,
-# borders not shadows, no emojis. Stateless — each question hits /ask on its own.
+# Buyer-agent-facing view: a deliberate, clean dark-terminal aesthetic to signal
+# "this is the machine interface" — in contrast to the warm Traverum provider
+# dashboard on :3000. Stateless — each question hits /ask on its own.
 PAGE = """<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Löyly — booking agent</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<title>löyly — booking agent</title>
 <style>
   :root{
-    --background:#fefcf9; --accent:#f4efe6;
-    --foreground:rgb(55,53,47); --secondary:rgba(55,53,47,0.65);
-    --muted:rgba(55,53,47,0.4); --border:rgba(55,53,47,0.09);
-    --primary:#5a6b4e; --primary-fg:#fefcf9; --walnut:#5d4631;
-    --destructive:#b8866b; --beige:rgba(242,241,238,0.6);
+    --bg:#16150f; --fg:#d6d3cc; --dim:rgba(214,211,204,0.45);
+    --line:rgba(214,211,204,0.12); --accent:#8aa37a; --err:#c98a6b;
   }
   *{box-sizing:border-box}
   html,body{height:100%}
   body{
-    margin:0; background:var(--background); color:var(--foreground);
-    font-family:"DM Sans",sans-serif; font-weight:300; font-size:15px;
+    margin:0; background:var(--bg); color:var(--fg);
+    font-family:ui-monospace,"JetBrains Mono","Cascadia Code",Menlo,Consolas,monospace;
+    font-size:14px; line-height:1.6;
   }
-  main{max-width:680px; height:100dvh; margin:0 auto; padding:40px 24px 24px;
+  ::selection{background:var(--accent); color:var(--bg)}
+  main{max-width:760px; height:100dvh; margin:0 auto; padding:28px 24px 20px;
        display:flex; flex-direction:column}
-  h1{margin:0; font-size:20px; font-weight:300}
-  .sub{margin:4px 0 0; font-size:14px; color:var(--muted)}
-  header{padding-bottom:16px; border-bottom:1px solid var(--border)}
 
-  #log{flex:1; overflow-y:auto; padding:20px 0; display:flex;
-       flex-direction:column; gap:12px}
-  .msg{max-width:85%; padding:10px 14px; border-radius:8px; line-height:1.5;
-       white-space:pre-wrap; overflow-wrap:break-word}
-  .msg.user{align-self:flex-end; background:var(--beige)}
-  .msg.agent{align-self:flex-start; border:1px solid var(--border)}
-  .msg.err{border-color:var(--destructive); color:var(--destructive)}
+  header{display:flex; align-items:center; gap:8px; padding-bottom:12px;
+         border-bottom:1px solid var(--line); color:var(--dim)}
+  .led{width:7px; height:7px; border-radius:50%; background:var(--accent)}
 
-  .msg details{margin-top:8px; border-top:1px solid var(--border); padding-top:8px}
-  .msg summary{cursor:pointer; font-size:12px; color:var(--muted);
-               list-style:none; user-select:none}
-  .msg summary::before{content:"› "; display:inline-block; transition:transform .15s}
-  .msg details[open] summary::before{transform:rotate(90deg)}
-  .msg .work{margin:8px 0 0; padding:8px 10px; border-radius:3px; background:var(--beige);
-             font-family:ui-monospace,monospace; font-size:11.5px; color:var(--secondary);
-             white-space:pre-wrap; overflow-wrap:break-word}
+  #log{flex:1; overflow-y:auto; padding:16px 0}
+  .turn{margin-bottom:14px; white-space:pre-wrap; overflow-wrap:break-word}
+  .turn.user .prompt{color:var(--accent)}
+  .turn.agent{padding-left:14px}
+  .turn.agent strong{color:var(--accent); font-weight:600}
+  .turn.agent.err{color:var(--err)}
 
-  .dots{display:inline-flex; gap:4px; padding:4px 0}
-  .dots span{width:6px; height:6px; border-radius:50%; background:var(--muted);
-             animation:pulse 1.2s ease-in-out infinite}
-  .dots span:nth-child(2){animation-delay:.2s}
-  .dots span:nth-child(3){animation-delay:.4s}
-  @keyframes pulse{0%,80%,100%{opacity:.25}40%{opacity:1}}
+  .turn details{margin-top:6px}
+  .turn summary{cursor:pointer; color:var(--dim); list-style:none; user-select:none}
+  .turn summary::before{content:"\\25B8 "}
+  .turn details[open] summary::before{content:"\\25BE "}
+  .work{color:var(--dim); padding:2px 0 2px 14px; white-space:pre-wrap;
+        overflow-wrap:break-word; font-size:12.5px}
 
-  #chips{display:flex; flex-wrap:wrap; gap:8px; padding-bottom:12px}
-  .chip{border:1px solid var(--border); background:transparent; border-radius:8px;
-        padding:6px 12px; font:inherit; font-size:13px; color:var(--secondary);
-        cursor:pointer; transition:background-color .15s}
-  .chip:hover{background:var(--accent)}
+  #suggested{color:var(--dim); padding-bottom:14px}
+  #suggested .cmd{display:block; background:none; border:0; padding:1px 0;
+                  font:inherit; color:var(--dim); cursor:pointer; text-align:left}
+  #suggested .cmd:hover{color:var(--accent)}
 
-  #composer{display:flex; gap:8px}
-  #q{flex:1; border:0; border-radius:3px; background:var(--beige); padding:10px 14px;
-     font:inherit; color:var(--foreground); outline:none; transition:background-color .15s}
-  #q::placeholder{color:var(--muted)}
-  #q:focus{background:rgba(242,241,238,1)}
-  #send{display:flex; align-items:center; justify-content:center; width:40px;
-        border:0; border-radius:3px; background:var(--primary); color:var(--primary-fg);
-        cursor:pointer; transition:background-color .15s}
-  #send:hover{background:var(--walnut)}
-  #send:disabled,#q:disabled{opacity:.4}
+  #composer{display:flex; gap:8px; align-items:baseline; padding-top:12px;
+            border-top:1px solid var(--line)}
+  #composer .prompt{color:var(--accent)}
+  #q{flex:1; background:transparent; border:0; outline:none; font:inherit;
+     color:var(--fg); caret-color:var(--accent); padding:0}
+  #q::placeholder{color:var(--dim)}
+  #q:disabled{opacity:.4}
 </style>
 </head>
 <body>
 <main>
   <header>
-    <h1>Löyly</h1>
-    <p class="sub">Ask the booking agent about sauna experiences.</p>
+    <span class="led"></span>
+    <span>löyly booking agent v1 — connected</span>
   </header>
 
   <div id="log"></div>
 
-  <div id="chips">
-    <button class="chip">What's available next week?</button>
-    <button class="chip">Book the earliest open session for the raft cruise</button>
-    <button class="chip">How much revenue is in booked sessions?</button>
+  <div id="suggested">suggested:
+    <button class="cmd">[1] what's available next week?</button>
+    <button class="cmd">[2] book the earliest open session for the raft cruise</button>
+    <button class="cmd">[3] how much revenue is in booked sessions?</button>
   </div>
 
   <form id="composer">
-    <input id="q" placeholder="Ask anything, or ask to book a session" autocomplete="off" autofocus>
-    <button id="send" type="submit" title="Send" aria-label="Send">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-           stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="m5 12 14 0"></path><path d="m13 6 6 6-6 6"></path>
-      </svg>
-    </button>
+    <span class="prompt">$</span>
+    <input id="q" placeholder="ask anything, or ask to book a session" autocomplete="off"
+           spellcheck="false" autofocus>
   </form>
 </main>
 
 <script>
 const log = document.getElementById('log');
-const chips = document.getElementById('chips');
+const suggested = document.getElementById('suggested');
 const form = document.getElementById('composer');
 const input = document.getElementById('q');
-const send = document.getElementById('send');
+const FRAMES = ['\\u280B','\\u2819','\\u2839','\\u2838','\\u283C','\\u2834','\\u2826','\\u2827','\\u2807','\\u280F'];
 
-function bubble(cls){
+function turn(cls){
   const el = document.createElement('div');
-  el.className = 'msg ' + cls;
+  el.className = 'turn ' + cls;
   log.appendChild(el);
   log.scrollTop = log.scrollHeight;
   return el;
@@ -167,18 +146,21 @@ function showAnswer(el, d, isError){
   // textContent first (escapes any HTML), then upgrade markdown bold only
   el.textContent = d.answer || JSON.stringify(d);
   el.innerHTML = el.innerHTML.replace(/\\*\\*([^*]+)\\*\\*/g, '<strong>$1</strong>');
-  if (isError) el.classList.add('err');
+  if (isError){
+    el.classList.add('err');
+    el.textContent = '! ' + el.textContent;
+  }
   if (d.queries && d.queries.length){
     const details = document.createElement('details');
     const summary = document.createElement('summary');
-    summary.textContent = 'Show work · ' + d.queries.length +
+    summary.textContent = 'show work \\u00B7 ' + d.queries.length +
       (d.queries.length === 1 ? ' step' : ' steps');
     details.appendChild(summary);
     for (const q of d.queries){
-      const pre = document.createElement('div');
-      pre.className = 'work';
-      pre.textContent = q.trim();
-      details.appendChild(pre);
+      const w = document.createElement('div');
+      w.className = 'work';
+      w.textContent = '\\u00B7 ' + q.trim();
+      details.appendChild(w);
     }
     el.appendChild(details);
   }
@@ -187,13 +169,22 @@ function showAnswer(el, d, isError){
 
 async function ask(question){
   if (!question.trim()) return;
-  chips.style.display = 'none';
+  suggested.style.display = 'none';
   input.value = '';
-  input.disabled = send.disabled = true;
+  input.disabled = true;
 
-  bubble('user').textContent = question;
-  const pending = bubble('agent');
-  pending.innerHTML = '<span class="dots"><span></span><span></span><span></span></span>';
+  const u = turn('user');
+  u.innerHTML = '<span class="prompt">$ </span>';
+  u.appendChild(document.createTextNode(question));
+
+  const pending = turn('agent');
+  pending.style.color = 'var(--dim)';
+  let f = 0;
+  pending.textContent = FRAMES[0] + ' thinking\\u2026';
+  const spin = setInterval(() => {
+    f = (f + 1) % FRAMES.length;
+    pending.textContent = FRAMES[f] + ' thinking\\u2026';
+  }, 90);
 
   try {
     const r = await fetch('/ask', {
@@ -205,18 +196,23 @@ async function ask(question){
     let d; try { d = JSON.parse(text); } catch { d = {answer: text}; }
     if (!r.ok && !d.answer) d.answer = 'HTTP ' + r.status + ': ' + text;
     const isError = !r.ok || (d.answer || '').startsWith('Error:');
+    clearInterval(spin);
+    pending.style.color = '';
     showAnswer(pending, d, isError);
   } catch (e) {
-    showAnswer(pending, {answer: 'Request failed: ' + e}, true);
+    clearInterval(spin);
+    pending.style.color = '';
+    showAnswer(pending, {answer: 'request failed: ' + e}, true);
   } finally {
-    input.disabled = send.disabled = false;
+    input.disabled = false;
     input.focus();
   }
 }
 
 form.addEventListener('submit', e => { e.preventDefault(); ask(input.value); });
-chips.addEventListener('click', e => {
-  if (e.target.classList.contains('chip')) ask(e.target.textContent);
+suggested.addEventListener('click', e => {
+  const b = e.target.closest('.cmd');
+  if (b) ask(b.textContent.replace(/^\\[\\d\\]\\s*/, ''));
 });
 </script>
 </body>

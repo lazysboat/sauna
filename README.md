@@ -5,15 +5,16 @@ ClickHouse backend:
 
 1. **Agent interface** — buyer agents discover and book sessions: REST
    (`GET /catalog`, `POST /sessions/{id}/book`) or natural language via `POST /ask`
-   (a Claude tool-use agent that writes SQL *and* can call `book_session`).
-2. **Provider dashboard** (`frontend/`, Next.js on :3000) — the sauna owner manages
-   **Experiences** (catalog: price, capacity, published/paused) and a **Calendar**
-   of bookable **Sessions** (open/booked pills on a month view).
+   (a Claude tool-use agent that writes SQL *and* can call `book_session`). The
+   page at :8000 is a deliberate dark-terminal chat UI for this agent.
+2. **Sauna directory** (`frontend/`, Next.js on :3000) — a read-only summary of
+   **100 saunas across Finland**: one image each, provider, city, price, capacity,
+   and upcoming **availability** (the open sessions the agent can book).
 
 ```
- Provider dashboard (Next.js :3000)          Buyer agent
-   Experiences | Calendar                  "book me a sauna…"
-            │  CRUD                                │  /ask · /catalog · /book
+ Sauna directory (Next.js :3000)             Buyer agent (:8000 terminal UI)
+   100 saunas · images · availability       "book me a smoke sauna in Tampere…"
+            │  read-only                           │  /ask · /catalog · /book
             ▼                                      ▼
         FastAPI backend (:8000) ── Claude tool-use loop (run_sql + book_session)
             │
@@ -73,14 +74,16 @@ curl -s -X POST localhost:8000/ask \
 # -> {"answer": "...", "queries": ["SELECT ..."]}
 ```
 
-`make seed` means the demo works immediately, with no dependency on Airbyte. It also
-seeds the marketplace: one published experience ("Sauna raft cruise — Näsijärvi") and
-three sessions.
+`make seed` rebuilds the whole demo world deterministically: **100 dummy saunas**
+(8 content archetypes × 20 Finnish cities, one picsum image each) and **~350
+availability sessions** over the next two weeks (~75% open). Re-running resets it.
 
-## The provider dashboard (frontend/)
+## The sauna directory (frontend/)
 
-Next.js app (Tailwind v4, lucide-react, date-fns) implementing the Traverum-design
-supplier dashboard — Experiences + Calendar tabs. Needs Node 20+:
+Next.js app (Tailwind v4, lucide-react) in the Traverum design — a read-only grid
+of all 100 saunas with image, provider · city, price, capacity, duration and the
+next open slots as dashed pills ("Fully booked" when none). Client-side search +
+city filter. Needs Node 20+:
 
 ```bash
 cd frontend
@@ -88,8 +91,7 @@ npm install
 npm run dev        # http://localhost:3000 (backend must be running on :8000)
 ```
 
-All data flows through the REST API (`/experiences`, `/sessions`) into ClickHouse —
-add an experience in the UI, and the booking agent can sell it immediately.
+Data comes from the same REST API (`/experiences`, `/sessions`) the agent uses.
 Override the API origin with `NEXT_PUBLIC_API_BASE_URL` (defaults to
 `http://localhost:8000`).
 

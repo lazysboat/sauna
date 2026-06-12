@@ -10,9 +10,11 @@ FastAPI + ClickHouse backend:
 
 1. **Agent interface** — buyer agents book sessions: REST (`GET /catalog`,
    `POST /sessions/{id}/book`) or natural language via `POST /ask` (Claude tool-use
-   loop with `run_sql` + `book_session` tools).
-2. **Provider dashboard** — `frontend/` Next.js app (:3000): Experiences catalog +
-   Calendar of bookable sessions, CRUD over `/experiences` and `/sessions`.
+   loop with `run_sql` + `book_session` tools). `GET /` on :8000 is a dark-terminal
+   chat UI for it.
+2. **Sauna directory** — `frontend/` Next.js app (:3000): read-only summary of 100
+   dummy saunas (image, provider, city, price, capacity) with upcoming availability
+   (open sessions). Seeded by `make seed`; the agent books from the same data.
 
 **ClickHouse** stores everything (ReplacingMergeTree upsert/tombstone pattern —
 query marketplace tables with `FINAL` + `WHERE _deleted = 0`), **Airbyte** (optional)
@@ -62,14 +64,15 @@ then `nvm install --lts`).
 cd frontend && npm install && npm run dev    # http://localhost:3000
 ```
 
-Verify: page shows "Sauna experiences" with Experiences | Calendar tabs; the seeded
-"Sauna raft cruise — Näsijärvi" card appears (data comes from the backend, so the
-backend must be running). Booking demo:
+Verify: page shows "Saunas of Finland" with a grid of 100 sauna cards (images via
+picsum.photos — needs internet), search + city filter, and dashed availability pills
+(data comes from the backend, so the backend must be running). Booking demo:
 
 ```bash
 curl -s -X POST localhost:8000/ask -H 'content-type: application/json' \
-  -d '{"question":"Book the earliest open session for the raft cruise"}'
-# → answer + a "-- book_session(...)" entry in queries; the calendar pill turns solid
+  -d '{"question":"Find a smoke sauna in Tampere for 10 people and book its earliest open slot"}'
+# → answer + a "-- book_session(...)" entry in queries; refresh the directory and
+#   that slot disappears from the card's availability pills
 ```
 
 ## Known gotchas (these WILL bite — handle proactively)
@@ -112,12 +115,11 @@ app/models.py   Pydantic Experience/Session (field names match frontend TS exact
 app/store.py    marketplace persistence (ReplacingMergeTree upsert/tombstone/book)
 app/crud.py     REST: /experiences, /sessions CRUD + /catalog + /sessions/{id}/book
 app/agent.py    Claude tool-use loop (run_sql + book_session, self-correcting)
-app/main.py     FastAPI: /health, POST /ask, GET / (web UI), CORS, crud router
-scripts/seed.py marketplace seed (spec §6) + purchases demo data
-frontend/       Next.js provider dashboard (Experiences | Calendar, Traverum design)
-  src/lib/store.ts          the data seam: API-backed useExperiences/useSessions
-  src/lib/calendar-colors.ts deterministic per-experience palette
-  src/components/           Experiences.tsx, Calendar.tsx
+app/main.py     FastAPI: /health, POST /ask, GET / (terminal chat UI), CORS, crud router
+scripts/seed.py 100 dummy saunas + ~350 availability sessions + purchases demo data
+frontend/       Next.js sauna directory (read-only, Traverum design)
+  src/lib/store.ts        the data seam: API-backed useExperiences/useSessions
+  src/components/Directory.tsx  the 100-sauna grid w/ search, filter, availability
 airbyte/README  Faker -> ClickHouse click-path
 render.yaml     one-service Render Blueprint (backend only)
 Makefile        install / seed / run / clean (auto-venv)
@@ -127,6 +129,7 @@ docs/ARCHITECTURE.md  how it all works
 ## Definition of done
 
 `make install && make seed && make run` succeed, `/health` returns `{"ok":true}`,
-`GET /experiences` returns the seeded raft cruise, the dashboard on :3000 shows it
-on both tabs, and a `POST /ask` asking to book an open session returns an `answer`
-with a `-- book_session(...)` entry in `queries` (pill flips to solid in the calendar).
+`GET /experiences` returns 100 saunas, the directory on :3000 renders the grid with
+images and availability pills, and a `POST /ask` asking to book an open slot returns
+an `answer` with a `-- book_session(...)` entry in `queries` (the slot disappears
+from the directory card after refresh).

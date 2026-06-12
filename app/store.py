@@ -11,8 +11,8 @@ import time
 from app.models import Experience, Session
 
 _EXPERIENCE_COLS = [
-    "id", "title", "location", "description", "priceAmount",
-    "priceUnit", "capacity", "durationHours", "status",
+    "id", "title", "provider", "city", "location", "description", "imageUrl",
+    "priceAmount", "priceUnit", "capacity", "durationHours", "status",
 ]
 _SESSION_COLS = ["id", "experienceId", "date", "time", "status"]
 
@@ -28,8 +28,11 @@ def ensure_tables(client) -> None:
         CREATE TABLE IF NOT EXISTS experiences (
             id            String,
             title         String,
+            provider      String,
+            city          String,
             location      String,
             description   String,
+            imageUrl      String,
             priceAmount   Float64,
             priceUnit     String,
             capacity      UInt32,
@@ -80,9 +83,28 @@ def upsert_experience(client, exp: Experience) -> Experience:
     return exp
 
 
+def bulk_upsert_experiences(client, exps: list[Experience]) -> None:
+    v = time.time_ns()
+    client.insert(
+        "experiences",
+        [[getattr(e, c) for c in _EXPERIENCE_COLS] + [0, v] for e in exps],
+        column_names=_EXPERIENCE_COLS + ["_deleted", "_version"],
+    )
+
+
+def bulk_upsert_sessions(client, sess: list[Session]) -> None:
+    v = time.time_ns()
+    client.insert(
+        "sessions",
+        [[getattr(s, c) for c in _SESSION_COLS] + [0, v] for s in sess],
+        column_names=_SESSION_COLS + ["_deleted", "_version"],
+    )
+
+
 def delete_experience(client, exp_id: str) -> None:
     _insert(client, "experiences", _EXPERIENCE_COLS,
-            [exp_id, "", "", "", 0.0, "booking", 1, 0.0, "paused"], deleted=1)
+            [exp_id, "", "", "", "", "", "", 0.0, "booking", 1, 0.0, "paused"],
+            deleted=1)
 
 
 # --- sessions ---
