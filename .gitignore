@@ -4,3 +4,10 @@ venv/
 __pycache__/
 *.pyc
 .DS_Store
+
+# Local agent-skill installs (e.g. `npx skills add thesysdev/openui`)
+.agents/
+skills-lock.json
+
+# Local no-secrets demo harness for the OpenUI cards
+.openui-test/
