@@ -163,6 +163,7 @@ def generate_saunas():
 
     rng = random.Random(42)
     saunas = []
+    used_images: set[str] = set()  # ensure every sauna gets a unique imageUrl
     for i in range(1, N_SAUNAS + 1):
         t_idx = (i - 1) % len(TEMPLATES)
         title, desc, provider_pat, unit, price_rng, cap_rng, hours_rng, loc_pat = (
@@ -173,9 +174,19 @@ def generate_saunas():
         price = rng.randint(*price_rng)
         if unit == "booking":
             price = round(price / 10) * 10  # round bookings to tens of euros
-        # archetype-matched real photo; cycles within the group
+        # Archetype-matched real photo, but every sauna gets a UNIQUE imageUrl.
+        # Walk the group from its cycle position for the first unused photo; once
+        # the group's photos are exhausted (there are more saunas than distinct
+        # photos), keep the archetype image but append an ignored #fragment so the
+        # URL is still unique — no two saunas ever share an imageUrl.
         group = IMAGES[TEMPLATE_IMAGE_GROUP[t_idx]]
-        image = group[((i - 1) // len(TEMPLATES)) % len(group)]
+        start = ((i - 1) // len(TEMPLATES)) % len(group)
+        image = next(
+            (group[(start + k) % len(group)] for k in range(len(group))
+             if group[(start + k) % len(group)] not in used_images),
+            f"{group[start]}#{exp_id}",
+        )
+        used_images.add(image)
         saunas.append(Experience(
             id=exp_id,
             title=title,
