@@ -57,6 +57,10 @@ PAGE = """<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>löyly — booking agent</title>
+<!-- OpenUI browser bundle: React + the OpenUI Lang parser/renderer + component
+     library, served as one IIFE that sets window.__OpenUI. Pinned for repro. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@openuidev/browser-bundle@0.1.1/dist/openui-styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@openuidev/browser-bundle@0.1.1/dist/openui-bundle.min.js"></script>
 <style>
   :root{
     --bg:#16150f; --fg:#d6d3cc; --dim:rgba(214,211,204,0.45);
@@ -91,6 +95,12 @@ PAGE = """<!doctype html>
   .work{color:var(--dim); padding:2px 0 2px 14px; white-space:pre-wrap;
         overflow-wrap:break-word; font-size:12.5px}
 
+  /* OpenUI renders its own (light) card UI; give it room and a rounded frame so
+     it reads as a distinct rich block inside the dark transcript. */
+  .openui{margin:10px 0 4px; border-radius:10px; overflow:hidden;
+          background:#fff; color-scheme:light}
+  .openui:empty{display:none}
+
   #suggested{color:var(--dim); padding-bottom:14px}
   #suggested .cmd{display:block; background:none; border:0; padding:1px 0;
                   font:inherit; color:var(--dim); cursor:pointer; text-align:left}
@@ -115,7 +125,7 @@ PAGE = """<!doctype html>
   <div id="log"></div>
 
   <div id="suggested">suggested:
-    <button class="cmd">[1] what's available next week?</button>
+    <button class="cmd">[1] find a smoke sauna in Tampere for 10 people</button>
     <button class="cmd">[2] book the earliest open session for the raft cruise</button>
     <button class="cmd">[3] how much revenue is in booked sessions?</button>
   </div>
@@ -142,14 +152,61 @@ function turn(cls){
   return el;
 }
 
+// When a button inside an OpenUI card is clicked (e.g. "Book Sat 18:00") the
+// renderer fires onAction with a @ToAssistant message — we feed it straight back
+// into the chat as the next question, closing the loop. Defensive about the
+// action object's shape: pull the first plausible message string out of it.
+function actionMessage(a){
+  let found = null;
+  (function walk(o){
+    if (found != null || o == null || typeof o !== 'object') return;
+    for (const k of ['message','text','content','value','prompt','label']){
+      if (typeof o[k] === 'string' && o[k].trim()){ found = o[k]; return; }
+    }
+    for (const v of Object.values(o)) walk(v);
+  })(a);
+  return found;
+}
+
+function renderUI(container, lang){
+  const U = window.__OpenUI;
+  if (!U || !U.Renderer){ return false; }
+  try {
+    const root = U.createRoot(container);
+    root.render(U.React.createElement(U.Renderer, {
+      response: lang,
+      library: U.openuiChatLibrary,
+      isStreaming: false,
+      onAction: a => { const m = actionMessage(a); if (m) ask(m); },
+    }));
+    return true;
+  } catch (e) {
+    console.error('OpenUI render failed', e);
+    return false;
+  }
+}
+
 function showAnswer(el, d, isError){
-  // textContent first (escapes any HTML), then upgrade markdown bold only
-  el.textContent = d.answer || JSON.stringify(d);
-  el.innerHTML = el.innerHTML.replace(/\\*\\*([^*]+)\\*\\*/g, '<strong>$1</strong>');
+  el.textContent = '';
+  // Plain-text prose (always escaped; only OpenUI Lang bypasses escaping, via
+  // the trusted renderer). Upgrade **bold** to <strong> like before.
+  const prose = document.createElement('div');
+  prose.textContent = d.answer || (d.ui ? '' : JSON.stringify(d));
+  prose.innerHTML = prose.innerHTML.replace(/\\*\\*([^*]+)\\*\\*/g, '<strong>$1</strong>');
   if (isError){
     el.classList.add('err');
-    el.textContent = '! ' + el.textContent;
+    prose.textContent = '! ' + prose.textContent;
   }
+  if (prose.textContent) el.appendChild(prose);
+
+  // Rich OpenUI sauna cards, when the agent chose to present them.
+  if (d.ui && !isError){
+    const card = document.createElement('div');
+    card.className = 'openui';
+    el.appendChild(card);
+    if (!renderUI(card, d.ui)) card.remove();  // bundle unavailable -> drop frame
+  }
+
   if (d.queries && d.queries.length){
     const details = document.createElement('details');
     const summary = document.createElement('summary');
