@@ -1,0 +1,30 @@
+# Render Blueprint — deploys the agent as one web service.
+# ClickHouse Cloud and Airbyte Cloud are managed externally; their host/password
+# are pasted into the env vars below (in the Render dashboard for the secret ones).
+#
+# Deploy: push this repo to GitHub, then in Render: New → Blueprint → pick the repo.
+services:
+  - type: web
+    name: sauna-agent
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false              # set in dashboard
+      - key: CLAUDE_MODEL
+        value: claude-opus-4-8
+      - key: CLICKHOUSE_HOST
+        sync: false              # set in dashboard
+      - key: CLICKHOUSE_PASSWORD
+        sync: false              # set in dashboard
+      - key: CLICKHOUSE_PORT
+        value: "8443"
+      - key: CLICKHOUSE_USER
+        value: default
+      - key: CLICKHOUSE_DATABASE
+        value: default
+      - key: CLICKHOUSE_SECURE
+        value: "true"

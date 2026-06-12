@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+clickhouse-connect
+anthropic
+pydantic-settings
+python-dotenv
