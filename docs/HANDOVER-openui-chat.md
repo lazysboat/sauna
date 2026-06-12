@@ -30,11 +30,15 @@ Built per the **recommended** path below — no new Python deps, backend stays A
 - **Booking affordance (interactive):** card Book buttons emit `@ToAssistant("Book session
   <id>")`; the renderer's `onAction` feeds that straight back into the chat, closing the loop.
 
-**Not yet verified live** (built without local secrets): needs the tester's `ANTHROPIC_API_KEY`
-+ ClickHouse creds and `make seed`. Two things to eyeball: (1) Claude emits well-formed Lang
-for real queries — the few-shot should cover it, the prose fallback covers failures; (2) the
-OpenUI light-themed cards sit acceptably in the dark terminal (global CSS bleed). Streaming was
-intentionally **not** added (v1 renders the full block on response).
+**Verified live end-to-end** (real `ANTHROPIC_API_KEY` + ClickHouse, after `seed`): "show me
+smoke saunas for a group of 10+" → live Claude (`claude-opus-4-5`) emitted well-formed OpenUI
+Lang with real data → rendered as a Carousel of image cards → clicking a card's **Book** button
+fired `onAction` → the agent booked the session and rendered a "✅ Booking Confirmed!" card →
+the slot flipped to `booked` in ClickHouse. The OpenUI cards auto-theme dark and sit cleanly in
+the terminal. Three fixes came out of that test: `MAX_STEPS` 6→9 (room for the extra `present_ui`
+step), the `onAction` message lives under `humanFriendlyMessage` (added to the extractor), and
+the seed has no published Tampere smoke sauna so suggestion `[1]` now matches real data.
+Streaming was intentionally **not** added (v1 renders the full block on response).
 
 ---
 

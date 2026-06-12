@@ -125,7 +125,7 @@ PAGE = """<!doctype html>
   <div id="log"></div>
 
   <div id="suggested">suggested:
-    <button class="cmd">[1] find a smoke sauna in Tampere for 10 people</button>
+    <button class="cmd">[1] show me smoke saunas for a group of 10+</button>
     <button class="cmd">[2] book the earliest open session for the raft cruise</button>
     <button class="cmd">[3] how much revenue is in booked sessions?</button>
   </div>
@@ -157,10 +157,13 @@ function turn(cls){
 // into the chat as the next question, closing the loop. Defensive about the
 // action object's shape: pull the first plausible message string out of it.
 function actionMessage(a){
+  // OpenUI fires onAction with e.g. {type:"continue_conversation",
+  // humanFriendlyMessage:"Book session s-..."}. Pull the message out, tolerating
+  // shape changes across bundle versions.
   let found = null;
   (function walk(o){
     if (found != null || o == null || typeof o !== 'object') return;
-    for (const k of ['message','text','content','value','prompt','label']){
+    for (const k of ['humanFriendlyMessage','message','text','content','value','prompt','label']){
       if (typeof o[k] === 'string' && o[k].trim()){ found = o[k]; return; }
     }
     for (const v of Object.values(o)) walk(v);

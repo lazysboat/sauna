@@ -160,7 +160,8 @@ TOOLS = [
     },
 ]
 
-MAX_STEPS = 6
+# Headroom for: search (1-2) + optional refine + present_ui + final summary.
+MAX_STEPS = 9
 
 
 def _book(ch, session_id: str) -> str:
