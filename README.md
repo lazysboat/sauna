@@ -1,19 +1,31 @@
-# sauna 🧖
+# sauna 🧖 — Löyly booking marketplace
 
-A minimal, **working** template that wires together three tools for a hackathon:
+A sauna-experience **booking marketplace** with two interfaces over one FastAPI +
+ClickHouse backend:
+
+1. **Agent interface** — buyer agents discover and book sessions: REST
+   (`GET /catalog`, `POST /sessions/{id}/book`) or natural language via `POST /ask`
+   (a Claude tool-use agent that writes SQL *and* can call `book_session`).
+2. **Provider dashboard** (`frontend/`, Next.js on :3000) — the sauna owner manages
+   **Experiences** (catalog: price, capacity, published/paused) and a **Calendar**
+   of bookable **Sessions** (open/booked pills on a month view).
+
+```
+ Provider dashboard (Next.js :3000)          Buyer agent
+   Experiences | Calendar                  "book me a sauna…"
+            │  CRUD                                │  /ask · /catalog · /book
+            ▼                                      ▼
+        FastAPI backend (:8000) ── Claude tool-use loop (run_sql + book_session)
+            │
+        ClickHouse Cloud  ◀──ELT── Airbyte (optional)
+```
 
 | Tool | Role |
 |------|------|
-| **ClickHouse** (Cloud) | Analytical (OLAP) database — stores the data, runs the SQL |
-| **Airbyte** (Cloud) | ELT ingestion — loads data *into* ClickHouse |
-| **Render** | Hosts the app |
-| **Claude** (agent) | A FastAPI app that turns natural-language questions into ClickHouse SQL, runs it, and answers |
-
-```
-Airbyte "Sample Data (Faker)"  ──ELT──▶  ClickHouse Cloud  ◀──SQL──  FastAPI agent  ◀── you
-        (or scripts/seed.py)             (OLAP store)               (Claude tool-use loop)
-                                                                    deployed on Render
-```
+| **ClickHouse** (Cloud) | Stores experiences, sessions, demo data; runs the agent's SQL |
+| **Airbyte** (Cloud) | Optional ELT ingestion into ClickHouse |
+| **Render** | Hosts the backend |
+| **Claude** | Booking agent: NL → SQL → answer, plus the `book_session` tool |
 
 The "agent" is a small Claude **tool-use loop**: Claude is given one `run_sql` tool, writes a
 query, sees the rows (or the error), and self-corrects until it can answer in plain language.
@@ -61,7 +73,37 @@ curl -s -X POST localhost:8000/ask \
 # -> {"answer": "...", "queries": ["SELECT ..."]}
 ```
 
-`make seed` means the demo works immediately, with no dependency on Airbyte.
+`make seed` means the demo works immediately, with no dependency on Airbyte. It also
+seeds the marketplace: one published experience ("Sauna raft cruise — Näsijärvi") and
+three sessions.
+
+## The provider dashboard (frontend/)
+
+Next.js app (Tailwind v4, lucide-react, date-fns) implementing the Traverum-design
+supplier dashboard — Experiences + Calendar tabs. Needs Node 20+:
+
+```bash
+cd frontend
+npm install
+npm run dev        # http://localhost:3000 (backend must be running on :8000)
+```
+
+All data flows through the REST API (`/experiences`, `/sessions`) into ClickHouse —
+add an experience in the UI, and the booking agent can sell it immediately.
+Override the API origin with `NEXT_PUBLIC_API_BASE_URL` (defaults to
+`http://localhost:8000`).
+
+## The agent booking interface
+
+```bash
+curl -s localhost:8000/catalog                      # published experiences + open sessions
+curl -s -X POST localhost:8000/sessions/<id>/book   # book (409 if already booked)
+curl -s -X POST localhost:8000/ask -H 'content-type: application/json' \
+  -d '{"question":"Book the earliest open session for the raft cruise"}'
+```
+
+The `/ask` agent finds a matching open session via SQL, books it with its
+`book_session` tool, and the pill flips to solid (booked) in the owner's calendar.
 
 ## The real ingestion pipeline (Airbyte)
 

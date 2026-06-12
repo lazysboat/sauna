@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+/* Traverum design tokens — Nordic bones, Italian warmth (SPEC §3).
+   Warm-light only, no dark mode. Borders, not shadows. */
+@theme {
+  --color-background: #fefcf9;
+  --color-card: #fefcf9;
+  --color-accent: #f4efe6;
+  --color-foreground: rgb(55, 53, 47);
+  --color-secondary: rgba(55, 53, 47, 0.65);
+  --color-muted-foreground: rgba(55, 53, 47, 0.4);
+  --color-border: rgba(55, 53, 47, 0.09);
+  --color-primary: #5a6b4e;
+  --color-primary-foreground: #fefcf9;
+  --color-walnut: #5d4631;
+  --color-success: #6b8e6b;
+  --color-warning: #c9a961;
+  --color-destructive: #b8866b;
+  --color-info: #7a9cc6;
+
+  --radius-sm: 3px;
+  --radius-lg: 8px;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-weight: 300;
+}
+
+/* Borderless beige-fill input (SPEC §3) */
+.input {
+  width: 100%;
+  border: 0;
+  border-radius: 3px;
+  background: rgba(242, 241, 238, 0.6);
+  padding: 6px 12px;
+  font-size: 14px;
+  color: var(--color-foreground);
+  outline: none;
+  transition: background-color 0.15s ease;
+}
+.input::placeholder {
+  color: var(--color-muted-foreground);
+}
+.input:focus {
+  background: rgba(242, 241, 238, 1);
+}

@@ -5,9 +5,18 @@ Read `docs/ARCHITECTURE.md` for how it works; this file is the **runbook**.
 
 ## What this project is
 
-A natural-language → SQL demo: a FastAPI app where Claude answers questions about data in
-**ClickHouse** by writing and running SQL (a tool-use loop with one `run_sql` tool).
-**ClickHouse** stores the data, **Airbyte** (optional) loads it, **Render** (optional) hosts it.
+A sauna-experience **booking marketplace** (Löyly) with two interfaces over one
+FastAPI + ClickHouse backend:
+
+1. **Agent interface** — buyer agents book sessions: REST (`GET /catalog`,
+   `POST /sessions/{id}/book`) or natural language via `POST /ask` (Claude tool-use
+   loop with `run_sql` + `book_session` tools).
+2. **Provider dashboard** — `frontend/` Next.js app (:3000): Experiences catalog +
+   Calendar of bookable sessions, CRUD over `/experiences` and `/sessions`.
+
+**ClickHouse** stores everything (ReplacingMergeTree upsert/tombstone pattern —
+query marketplace tables with `FINAL` + `WHERE _deleted = 0`), **Airbyte** (optional)
+loads extra data, **Render** (optional) hosts the backend.
 
 ## Secrets the human must provide — ASK, don't invent
 
@@ -42,6 +51,26 @@ curl -s -X POST localhost:8000/ask -H 'content-type: application/json' \
 
 If `/ask` returns a real answer with a `queries` array, it is working. Open
 `http://localhost:8000` for the web UI.
+
+## Spin-up procedure (provider dashboard)
+
+Needs Node 20+ (if missing, install user-locally via nvm — no sudo:
+`curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash`
+then `nvm install --lts`).
+
+```bash
+cd frontend && npm install && npm run dev    # http://localhost:3000
+```
+
+Verify: page shows "Sauna experiences" with Experiences | Calendar tabs; the seeded
+"Sauna raft cruise — Näsijärvi" card appears (data comes from the backend, so the
+backend must be running). Booking demo:
+
+```bash
+curl -s -X POST localhost:8000/ask -H 'content-type: application/json' \
+  -d '{"question":"Book the earliest open session for the raft cruise"}'
+# → answer + a "-- book_session(...)" entry in queries; the calendar pill turns solid
+```
 
 ## Known gotchas (these WILL bite — handle proactively)
 
@@ -79,16 +108,25 @@ If `/ask` returns a real answer with a `queries` array, it is working. Open
 ```
 app/config.py   env settings (CLAUDE_MODEL default claude-opus-4-8)
 app/db.py       ClickHouse client, schema_text(), run_sql()
-app/agent.py    Claude tool-use loop (run_sql tool, self-correcting, thinking fallback)
-app/main.py     FastAPI: /health, POST /ask, GET / (web UI)
-scripts/seed.py direct-insert demo data (no Airbyte needed)
+app/models.py   Pydantic Experience/Session (field names match frontend TS exactly)
+app/store.py    marketplace persistence (ReplacingMergeTree upsert/tombstone/book)
+app/crud.py     REST: /experiences, /sessions CRUD + /catalog + /sessions/{id}/book
+app/agent.py    Claude tool-use loop (run_sql + book_session, self-correcting)
+app/main.py     FastAPI: /health, POST /ask, GET / (web UI), CORS, crud router
+scripts/seed.py marketplace seed (spec §6) + purchases demo data
+frontend/       Next.js provider dashboard (Experiences | Calendar, Traverum design)
+  src/lib/store.ts          the data seam: API-backed useExperiences/useSessions
+  src/lib/calendar-colors.ts deterministic per-experience palette
+  src/components/           Experiences.tsx, Calendar.tsx
 airbyte/README  Faker -> ClickHouse click-path
-render.yaml     one-service Render Blueprint
+render.yaml     one-service Render Blueprint (backend only)
 Makefile        install / seed / run / clean (auto-venv)
 docs/ARCHITECTURE.md  how it all works
 ```
 
 ## Definition of done
 
-`make install && make seed && make run` succeed, `/health` returns `{"ok":true}`, and a
-`POST /ask` returns an `answer` plus the `queries` the agent ran.
+`make install && make seed && make run` succeed, `/health` returns `{"ok":true}`,
+`GET /experiences` returns the seeded raft cruise, the dashboard on :3000 shows it
+on both tabs, and a `POST /ask` asking to book an open session returns an `answer`
+with a `-- book_session(...)` entry in `queries` (pill flips to solid in the calendar).

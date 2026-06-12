@@ -37,8 +37,45 @@ def rows():
                 ]
 
 
+def seed_marketplace(client):
+    """Seed the booking marketplace per MANAGEMENT-SYSTEM-SPEC §6:
+    one published experience + three sessions relative to today."""
+    from app import store
+    from app.models import Experience, Session
+
+    store.ensure_tables(client)
+    if store.list_experiences(client):
+        print("Marketplace already seeded — skipping.")
+        return
+
+    store.upsert_experience(client, Experience(
+        id="seed-1",
+        title="Sauna raft cruise — Näsijärvi",
+        location="Tampere",
+        description=(
+            "Wood-sauna cruise on lake Näsijärvi. Includes captain, "
+            "firewood, hot tub and roof terrace."
+        ),
+        priceAmount=440,
+        priceUnit="booking",
+        capacity=12,
+        durationHours=2,
+        status="published",
+    ))
+    today = datetime.now().date()
+    for offset, time_, status in [(1, "17:00", "open"), (3, "18:00", "booked"), (6, "16:00", "open")]:
+        store.upsert_session(client, Session(
+            experienceId="seed-1",
+            date=(today + timedelta(days=offset)).isoformat(),
+            time=time_,
+            status=status,
+        ))
+    print("Seeded marketplace: 1 experience, 3 sessions.")
+
+
 def main():
     client = get_client()
+    seed_marketplace(client)
     client.command(
         """
         CREATE TABLE IF NOT EXISTS purchases (

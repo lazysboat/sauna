@@ -39,11 +39,18 @@ def _create(system, messages):
     return _client.messages.create(**kwargs)
 
 SYSTEM = (
-    "You answer questions about data stored in a ClickHouse database. "
-    "Use the run_sql tool to inspect and query the data — write standard "
-    "ClickHouse SQL. Prefer a single query when you can. When you have the "
-    "answer, state it in one or two plain sentences. Do not invent numbers; "
-    "only report what the query returned."
+    "You are a booking assistant for a sauna-experience marketplace stored in "
+    "ClickHouse. Use the run_sql tool to inspect and query the data — write "
+    "standard ClickHouse SQL. The `experiences` table is the catalog (price, "
+    "capacity, status) and `sessions` are bookable date+time slots "
+    "(status 'open' or 'booked'); sessions.experienceId joins to experiences.id. "
+    "These tables use ReplacingMergeTree: always query them with FINAL and "
+    "WHERE _deleted = 0. "
+    "When the user asks to book something, find a matching OPEN session via SQL, "
+    "then call book_session with its id. Only published experiences are bookable. "
+    "Never book without finding a concrete session first; if nothing matches, say so. "
+    "When you have the answer, state it in one or two plain sentences. "
+    "Do not invent data; only report what the tools returned."
 )
 
 TOOLS = [
@@ -58,10 +65,39 @@ TOOLS = [
             "properties": {"sql": {"type": "string", "description": "ClickHouse SQL"}},
             "required": ["sql"],
         },
-    }
+    },
+    {
+        "name": "book_session",
+        "description": (
+            "Book an open session by its id (sessions.id), flipping it to 'booked'. "
+            "Call this only after finding the session via run_sql. Returns the "
+            "booked session, or an error if it doesn't exist / is already booked."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {"session_id": {"type": "string", "description": "sessions.id"}},
+            "required": ["session_id"],
+        },
+    },
 ]
 
 MAX_STEPS = 6
+
+
+def _book(ch, session_id: str) -> str:
+    """Execute a booking for the agent; errors come back as text it can act on."""
+    from app import store
+
+    try:
+        store.ensure_tables(ch)
+        ses, err = store.book_session(ch, session_id)
+        if err == "not_found":
+            return f"ERROR: no session with id {session_id}"
+        if err == "already_booked":
+            return f"ERROR: session {session_id} is already booked"
+        return f"BOOKED: {ses.model_dump_json()}"
+    except Exception as exc:  # noqa: BLE001 - surface to the model
+        return f"ERROR: {exc}"
 
 
 def answer(question: str, ch) -> dict:
@@ -83,16 +119,20 @@ def answer(question: str, ch) -> dict:
         messages.append({"role": "assistant", "content": resp.content})
         tool_results = []
         for block in resp.content:
-            if block.type == "tool_use" and block.name == "run_sql":
+            if block.type != "tool_use":
+                continue
+            if block.name == "run_sql":
                 sql = block.input["sql"]
                 queries.append(sql)
-                tool_results.append(
-                    {
-                        "type": "tool_result",
-                        "tool_use_id": block.id,
-                        "content": run_sql(ch, sql),
-                    }
-                )
+                out = run_sql(ch, sql)
+            elif block.name == "book_session":
+                out = _book(ch, block.input["session_id"])
+                queries.append(f"-- book_session({block.input['session_id']}): {out}")
+            else:
+                out = f"ERROR: unknown tool {block.name}"
+            tool_results.append(
+                {"type": "tool_result", "tool_use_id": block.id, "content": out}
+            )
         messages.append({"role": "user", "content": tool_results})
 
     final = ""
